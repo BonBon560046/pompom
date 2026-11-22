@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>診所訂飲料點單</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;600;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+/* VOICE: friendly clinic office notice, clear and quick to fill on a phone.
+   IDEA: a pharmacy medicine box / prescription label: the round's info is the label, each order a line.
+   PICTURE: the order form itself, large at the top, beside the live totals label.
+   COLOUR and TYPE: white, emerald #00a86b block, pale pink #ffd6e0 block, black; Schibsted Grotesk + Noto Sans TC.
+   LAYOUT: label band (store, deadline) → form + totals side by side → order list → organiser tools. */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#04140d);--ink:light-dark(#0b0f0d,#eaf5ef);--mut:light-dark(#4d5a53,#9fb7aa);
+--em:#00a86b;--em-ink:light-dark(#00754b,#4fe0a6);--pink:light-dark(#ffd6e0,#3a1f27);--line:light-dark(#d7e2dc,#1d3a2d);--card:light-dark(#f5faf7,#0a2117);--warn:light-dark(#b42318,#ff8a80)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Schibsted Grotesk","Noto Sans TC",system-ui,sans-serif;overflow-x:clip}
+.band{padding:clamp(20px,3.5vw,48px) max(5vw,16px)}
+.wrap{max-width:1240px;margin:0 auto}
+h1{font-size:clamp(30px,5vw,46px);line-height:1.05;margin:0;font-weight:900;text-wrap:balance}
+h2{font-size:22px;margin:0 0 14px;font-weight:800}
+.label{background:var(--em);color:#fff}
+.label .wrap{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:24px;align-items:end}
+.label dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 14px;margin:0;font-size:16px}
+.label dt{opacity:.85}.label dd{margin:0;font-weight:700}
+.label a{color:#fff}
+.sub{margin:8px 0 0;font-size:16px;opacity:.92}
+.status{display:inline-block;margin-top:12px;background:#fff;color:#00754b;font-weight:800;padding:4px 12px;border-radius:999px;font-size:14px}
+.status.late{background:var(--pink);color:#7a1230}
+.main .wrap{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:28px;align-items:start}
+form.order{display:grid;gap:16px}
+.field label,.field .lab{display:block;font-weight:700;font-size:15px;margin-bottom:6px}
+input[type=text],input[type=number],input[type=url],input[type=date],input[type=time],textarea{width:100%;font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:2px solid var(--line);border-radius:10px;padding:10px 12px;min-height:44px}
+textarea{min-height:64px;resize:vertical}
+input:focus,textarea:focus,button:focus-visible{outline:3px solid var(--em);outline-offset:1px}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips button{min-height:44px;padding:8px 14px;border-radius:999px;border:2px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;font-size:15px;cursor:pointer}
+.chips button[aria-pressed=true]{background:var(--em);border-color:var(--em);color:#fff;font-weight:700}
+.btns{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.btn{min-height:46px;padding:10px 20px;border-radius:10px;border:0;background:var(--ink);color:var(--bg);font:inherit;font-weight:800;cursor:pointer}
+.btn.em{background:var(--em);color:#fff}
+.btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--line)}
+.btn.danger{background:transparent;color:var(--warn);border:2px solid currentColor}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.msg{font-size:15px;color:var(--em-ink);font-weight:700;min-height:1.4em}
+.msg.err{color:var(--warn)}
+.totals{background:var(--pink);border-radius:4px;padding:22px}
+.totals .big{font-size:clamp(34px,6vw,52px);font-weight:900;line-height:1;white-space:nowrap}
+.totals .row{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid light-dark(#f1b6c5,#5a3340)}
+.totals .row:last-child{border:0}
+.totals .row b{white-space:nowrap;font-variant-numeric:tabular-nums}
+.gate{margin:14px 0 6px;font-weight:800}
+.note{font-size:14px;color:var(--mut)}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:14px;color:var(--mut);font-weight:700;white-space:nowrap}
+td.n,th.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+tr.mine td{background:var(--card)}
+tfoot td{font-weight:800;border-bottom:0}
+.empty{padding:28px;text-align:center;color:var(--mut);border:2px dashed var(--line);border-radius:10px}
+.paid{width:24px;height:24px;accent-color:var(--em)}
+.admin{background:var(--card);border-top:6px solid var(--em)}
+.admin .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.confirm{display:none;margin-top:12px;padding:14px;border:2px solid var(--warn);border-radius:10px}
+.confirm.show{display:block}
+pre.copy{white-space:pre-wrap;background:var(--bg);border:2px solid var(--line);border-radius:10px;padding:12px;font:15px/1.6 "Noto Sans TC",sans-serif;display:none}
+pre.copy.show{display:block}
+.hide{display:none!important}
+pre,.scroll{overflow-x:auto}
+@media(max-width:800px){.main .wrap,.label .wrap{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:600px){table{font-size:13px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px;border-bottom:1px solid var(--line)}.stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:6.5em;text-align:start}.stack td::before{content:attr(data-l);float:inline-start;width:6em;margin-inline-start:-6.5em;white-space:normal;color:var(--mut)}.stack td:empty{display:none}.stack tfoot td::before{content:""}.two{grid-template-columns:minmax(0,1fr)}}
+@media(prefers-reduced-motion:no-preference){.flash{animation:fl .8s ease}@keyframes fl{from{background:var(--pink)}}}
+</style>
+<script>new MutationObserver(()=>{for(const c of document.querySelectorAll('.stack tbody td:not([data-l])')){let i=0,p=c;while(p=p.previousElementSibling)i+=p.colSpan;c.dataset.l=c.closest('table').rows[0].cells[i]?.textContent||''}}).observe(document,{childList:true,subtree:true})</script>
+</head>
+<body>
+<header class="band label">
+  <div class="wrap">
+    <div>
+      <h1>診所訂飲料點單</h1>
+      <p class="sub" id="storeLine">這一輪的店家還沒填。</p>
+      <span class="status" id="status">等待開單</span>
+    </div>
+    <dl id="info">
+      <dt>日期</dt><dd id="iDate">—</dd>
+      <dt>截止點單</dt><dd id="iDeadline">—</dd>
+      <dt>菜單</dt><dd id="iMenu">—</dd>
+    </dl>
+  </div>
+</header>
+
+<section class="band main">
+  <div class="wrap">
+    <div>
+      <h2 id="formTitle">我的點單</h2>
+      <p class="msg err hide" id="noWrite"></p>
+      <form class="order" id="orderForm" autocomplete="off">
+        <div class="two">
+          <div class="field"><label for="fName">名字（暱稱就好）</label><input type="text" id="fName" maxlength="20" placeholder="例如：小美、王醫師" required></div>
+          <div class="field"><label for="fItem">品項</label><input type="text" id="fItem" maxlength="40" placeholder="例如：珍珠奶茶" required></div>
+        </div>
+        <div class="field"><span class="lab">大小</span><div class="chips" id="cSize"></div></div>
+        <div class="field"><span class="lab">甜度</span><div class="chips" id="cSweet"></div></div>
+        <div class="field"><span class="lab">冰塊</span><div class="chips" id="cIce"></div></div>
+        <div class="two">
+          <div class="field"><label for="fTop">加料</label><input type="text" id="fTop" maxlength="40" placeholder="沒有就留空"></div>
+          <div class="field"><label for="fPrice">飲料價格（含加料，元）</label><input type="number" id="fPrice" min="0" max="2000" step="1" inputmode="numeric" required></div>
+        </div>
+        <div class="field"><label for="fNote">備註</label><textarea id="fNote" maxlength="120" placeholder="例如：想要兩杯、珍珠少一點"></textarea></div>
+        <div class="btns">
+          <button class="btn em" id="submitBtn" type="submit">送出點單</button>
+          <button class="btn danger hide" id="delMine" type="button">取消我的單</button>
+        </div>
+        <p class="msg" id="formMsg" role="status"></p>
+      </form>
+    </div>
+
+    <aside class="totals" aria-label="總計">
+      <div class="note">實付總額</div>
+      <div class="big" id="tTotal">$0</div>
+      <div class="gate" id="tGate">外送門檻：未填</div>
+      <div class="row"><span>杯數</span><b id="tCount">0 杯</b></div>
+      <div class="row"><span>飲料總額</span><b id="tDrinks">$0</b></div>
+      <div class="row"><span>外送費＋服務費</span><b id="tFee">$0</b></div>
+      <div class="row"><span>折扣</span><b id="tDisc">$0</b></div>
+      <div class="row"><span>每人分攤外送費</span><b id="tShare">$0</b></div>
+      <div class="row"><span>已收</span><b id="tPaid">$0</b></div>
+      <div class="row"><span>未收</span><b id="tUnpaid">$0</b></div>
+      <p class="note">每人應付＝飲料價格＋分攤外送費（四捨五入到整數元，可能和實際外送費差 1～2 元）。</p>
+    </aside>
+  </div>
+</section>
+
+<section class="band">
+  <div class="wrap">
+    <h2>大家的點單</h2>
+    <p class="note" id="loadNote">讀取中…</p>
+    <div id="listBox"></div>
+  </div>
+</section>
+
+<section class="band admin hide" id="adminBox">
+  <div class="wrap">
+    <h2>負責人專區</h2>
+    <p class="note">只有負責人看得到這區。填好本次資訊後按「儲存」，再把這個網頁的連結傳到群組。</p>
+    <form id="cfgForm" class="grid" autocomplete="off">
+      <div class="field"><label for="cDate">日期</label><input type="date" id="cDate"></div>
+      <div class="field"><label for="cStore">店家名稱</label><input type="text" id="cStore" maxlength="40"></div>
+      <div class="field"><label for="cMenu">菜單連結</label><input type="url" id="cMenu" placeholder="https://"></div>
+      <div class="field"><label for="cDeadline">截止點單時間</label><input type="time" id="cDeadline"></div>
+      <div class="field"><label for="cMin">外送門檻金額</label><input type="number" id="cMin" min="0" step="1" inputmode="numeric"></div>
+      <div class="field"><label for="cFee">外送費＋服務費</label><input type="number" id="cFee" min="0" step="1" inputmode="numeric"></div>
+      <div class="field"><label for="cDisc">折扣金額（優惠碼、滿額折抵）</label><input type="number" id="cDisc" min="0" step="1" inputmode="numeric"></div>
+    </form>
+    <div class="btns" style="margin-top:16px">
+      <button class="btn em" id="saveCfg" type="button">儲存本次資訊</button>
+      <button class="btn ghost" id="copyOrder" type="button">複製訂單（給店家）</button>
+      <button class="btn danger" id="clearBtn" type="button">清空這一輪</button>
+    </div>
+    <p class="msg" id="adminMsg" role="status"></p>
+    <pre class="copy" id="copyBox"></pre>
+    <div class="confirm" id="confirmBox">
+      <p style="margin:0 0 10px"><b>確定要清空嗎？</b>所有人的點單和本次資訊都會刪掉，無法復原。</p>
+      <div class="btns"><button class="btn danger" id="clearYes" type="button">確定清空</button><button class="btn ghost" id="clearNo" type="button">先不要</button></div>
+    </div>
+  </div>
+</section>
+
+<script>
+{
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money=n=>'$'+Math.round(Number(n)||0).toLocaleString('en-US');
+const num=v=>{const n=Number(v);return Number.isFinite(n)?n:0};
+const SIZE=['中杯','大杯'];
+const SWEET=['正常甜','少糖','半糖','微糖','一分糖','無糖'];
+const ICE=['正常冰','少冰','微冰','去冰','完全去冰','常溫','溫','熱'];
+const pick={size:'中杯',sweet:'半糖',ice:'少冰'};
+let db=null,uid=null,isAdmin=false,cfg={},orders=[],myDoc=null,filledFromDb=false,dirty=false;
+const LOCAL=!(window.claude&&typeof window.claude.use==='function');
+let editingId=null;
+function makeLocal(){
+  const K='clinicDrinksV1';let st=null;
+  try{st=JSON.parse(localStorage.getItem(K))}catch(e){}
+  st=st&&typeof st==='object'?st:{cfg:{},orders:{}};st.cfg=st.cfg||{};st.orders=st.orders||{};
+  const subs={cfg:[],orders:[]},meta={fromCache:false,hasPendingWrites:false};
+  const save=()=>{try{localStorage.setItem(K,JSON.stringify(st))}catch(e){}};
+  const emitCfg=()=>subs.cfg.forEach(f=>f({exists:true,data:()=>st.cfg,metadata:meta}));
+  const emitOrders=()=>{const docs=Object.entries(st.orders).map(([id,d])=>({id,exists:true,data:()=>d,metadata:meta}));subs.orders.forEach(f=>f({docs,metadata:meta}))};
+  const doc=p=>{const [c,id]=p.split('/');const isCfg=c==='round';return{
+    async set(d){if(isCfg){st.cfg={...d};save();emitCfg()}else{st.orders[id]={...d};save();emitOrders()}},
+    async update(d){if(isCfg){Object.assign(st.cfg,d);save();emitCfg()}else{st.orders[id]={...(st.orders[id]||{}),...d};save();emitOrders()}},
+    async delete(){if(!isCfg){delete st.orders[id];save();emitOrders()}},
+    onSnapshot(f){subs.cfg.push(f);setTimeout(emitCfg,0);return()=>{}}}};
+  return{doc,collection:()=>({onSnapshot(f){subs.orders.push(f);setTimeout(emitOrders,0);return()=>{}}})};
+}
+function resetOrderForm(){
+  for(const id of ['#fItem','#fTop','#fPrice','#fNote'])$(id).value='';
+  if(LOCAL)$('#fName').value='';
+  editingId=null;uid=null;myDoc=null;dirty=false;renderAll();
+}
+
+function chips(el,list,key){
+  el.innerHTML=list.map(v=>`<button type="button" aria-pressed="${pick[key]===v}" data-v="${esc(v)}">${esc(v)}</button>`).join('');
+  el.onclick=e=>{const b=e.target.closest('button');if(!b)return;pick[key]=b.dataset.v;dirty=true;chips(el,list,key)};
+}
+function drawChips(){chips($('#cSize'),SIZE,'size');chips($('#cSweet'),SWEET,'sweet');chips($('#cIce'),ICE,'ice')}
+drawChips();
+if(!LOCAL){try{const n=localStorage.getItem('drinkName');if(n)$('#fName').value=n}catch(e){}}
+$('#orderForm').addEventListener('input',()=>{dirty=true});
+
+function calc(){
+  const list=orders.filter(o=>o.d.item);
+  const count=list.length;
+  const fee=num(cfg.fee),disc=num(cfg.discount),min=num(cfg.minimum);
+  const drinks=list.reduce((s,o)=>s+num(o.d.price),0);
+  const share=count?Math.round((fee-disc)/count):0;
+  const due=o=>num(o.d.price)+share;
+  const paid=list.filter(o=>o.d.paid).reduce((s,o)=>s+due(o),0);
+  const all=list.reduce((s,o)=>s+due(o),0);
+  return {list,count,fee,disc,min,drinks,share,due,paid,unpaid:all-paid,total:drinks+fee-disc};
+}
+
+function deadlinePassed(){
+  if(!cfg.deadline)return false;
+  const now=new Date();
+  const today=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  if(cfg.date&&cfg.date!==today)return cfg.date<today;
+  const [h,m]=cfg.deadline.split(':').map(Number);
+  return now.getHours()*60+now.getMinutes()>h*60+m;
+}
+
+function renderHeader(){
+  $('#storeLine').textContent=cfg.store?`這一輪訂：${cfg.store}`:'這一輪的店家還沒填。';
+  $('#iDate').textContent=cfg.date||'—';
+  $('#iDeadline').textContent=cfg.deadline||'—';
+  const m=String(cfg.menu||'');
+  $('#iMenu').innerHTML=/^https?:\/\//i.test(m)?`<a href="${esc(m)}" target="_blank" rel="noopener">打開菜單</a>`:'—';
+  const st=$('#status');
+  if(!cfg.store){st.textContent='等待開單';st.className='status'}
+  else if(deadlinePassed()){st.textContent='已過截止時間，要改請先問負責人';st.className='status late'}
+  else{st.textContent=cfg.deadline?`開放點單中，${cfg.deadline} 截止`:'開放點單中';st.className='status'}
+}
+
+function renderTotals(){
+  const c=calc();
+  $('#tTotal').textContent=money(c.total);
+  $('#tCount').textContent=c.count+' 杯';
+  $('#tDrinks').textContent=money(c.drinks);
+  $('#tFee').textContent=money(c.fee);
+  $('#tDisc').textContent=c.disc?'−'+money(c.disc):'$0';
+  $('#tShare').textContent=money(c.share);
+  $('#tPaid').textContent=money(c.paid);
+  $('#tUnpaid').textContent=money(c.unpaid);
+  $('#tGate').textContent=!c.min?'外送門檻：未填':c.drinks>=c.min?'外送門檻：已達 ✓':`外送門檻：還差 ${money(c.min-c.drinks)}`;
+}
+
+function renderList(){
+  const c=calc();
+  if(!c.list.length){$('#listBox').innerHTML='<div class="empty">還沒有人點，第一杯就是你的。</div>';return}
+  const rows=c.list.slice().sort((a,b)=>num(a.d.updatedAt)-num(b.d.updatedAt)).map(o=>{
+    const d=o.d;
+    const paidCell=isAdmin?`<input type="checkbox" class="paid" data-id="${esc(o.id)}" ${d.paid?'checked':''} aria-label="${esc(d.name)} 已付款">`:(d.paid?'✓':'');
+    const tools=LOCAL?`<br><button type="button" class="btn ghost" style="min-height:36px;padding:4px 10px;margin-top:6px" data-edit="${esc(o.id)}">改</button> <button type="button" class="btn danger" style="min-height:36px;padding:4px 10px;margin-top:6px" data-del="${esc(o.id)}">刪</button>`:'';
+    return `<tr class="${o.id===uid?'mine':''}"><td><b>${esc(d.name)}</b>${tools}</td><td>${esc(d.item)}</td><td>${esc(d.size)}</td><td>${esc(d.sweet)}</td><td>${esc(d.ice)}</td><td>${esc(d.topping)}</td><td class="n">${money(d.price)}</td><td class="n">${money(c.share)}</td><td class="n"><b>${money(c.due(o))}</b></td><td>${paidCell}</td><td>${esc(d.note)}</td></tr>`;
+  }).join('');
+  $('#listBox').innerHTML=`<div class="scroll"><table class="stack"><thead><tr><th>名字</th><th>品項</th><th>大小</th><th>甜度</th><th>冰塊</th><th>加料</th><th class="n">價格</th><th class="n">分攤</th><th class="n">應付</th><th>已付款</th><th>備註</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td colspan="6">合計 ${c.count} 杯</td><td class="n">${money(c.drinks)}</td><td class="n"></td><td class="n">${money(c.drinks+c.share*c.count)}</td><td colspan="2"></td></tr></tfoot></table></div>`;
+}
+
+function fillMine(){
+  if(filledFromDb||dirty||!myDoc)return;
+  const d=myDoc;filledFromDb=true;
+  $('#fName').value=d.name||'';$('#fItem').value=d.item||'';$('#fTop').value=d.topping||'';
+  $('#fPrice').value=d.price??'';$('#fNote').value=d.note||'';
+  if(d.size)pick.size=d.size;if(d.sweet)pick.sweet=d.sweet;if(d.ice)pick.ice=d.ice;drawChips();
+}
+function renderMine(){
+  if(LOCAL){
+    const ed=!!editingId;
+    $('#submitBtn').textContent=ed?'儲存修改':'送出點單';
+    $('#delMine').textContent='取消修改';$('#delMine').classList.toggle('hide',!ed);
+    $('#formTitle').textContent=ed?'修改點單':'點單（一人填一筆）';return;
+  }
+  const has=!!myDoc;
+  $('#submitBtn').textContent=has?'更新我的點單':'送出點單';
+  $('#delMine').classList.toggle('hide',!has);
+  $('#formTitle').textContent=has?'我的點單（已送出，可以修改）':'我的點單';
+}
+function renderAll(){renderHeader();renderTotals();renderList();renderMine()}
+
+function fillCfgForm(){
+  $('#cDate').value=cfg.date||'';$('#cStore').value=cfg.store||'';$('#cMenu').value=cfg.menu||'';
+  $('#cDeadline').value=cfg.deadline||'';$('#cMin').value=cfg.minimum??'';$('#cFee').value=cfg.fee??'';$('#cDisc').value=cfg.discount??'';
+}
+function lockForm(text){
+  $('#noWrite').textContent=text;$('#noWrite').classList.remove('hide');
+  for(const el of $('#orderForm').querySelectorAll('input,textarea,button'))el.disabled=true;
+}
+const say=(el,t,err)=>{el.textContent=t;el.classList.toggle('err',!!err)};
+
+$('#orderForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  if(LOCAL){uid=editingId||('o'+Date.now()+Math.random().toString(36).slice(2,6));const m=orders.find(o=>o.id===editingId);myDoc=m?m.d:null}
+  if(!db||!uid)return;
+  const data={name:$('#fName').value.trim(),item:$('#fItem').value.trim(),size:pick.size,sweet:pick.sweet,ice:pick.ice,
+    topping:$('#fTop').value.trim(),price:Math.max(0,Math.round(num($('#fPrice').value))),note:$('#fNote').value.trim(),updatedAt:Date.now()};
+  if(!data.name||!data.item){say($('#formMsg'),'名字和品項要填喔。',true);return}
+  try{localStorage.setItem('drinkName',data.name)}catch(e){}
+  const btn=$('#submitBtn');btn.disabled=true;say($('#formMsg'),'送出中…');
+  try{
+    const ref=db.doc('orders/'+uid);
+    if(myDoc)await ref.update(data);else await ref.set({...data,paid:false});
+    if(LOCAL){resetOrderForm();say($('#formMsg'),'收到了！下一位可以接著填。')}
+    else{dirty=false;say($('#formMsg'),'收到了！要改的話直接改完再按一次。')}
+  }catch(err){
+    say($('#formMsg'),err&&err.code==='invalid_argument'?'你目前的權限不能點單，請請負責人把你加成可編輯。':'沒送出去，請再按一次。',true);
+  }finally{btn.disabled=false}
+});
+$('#delMine').addEventListener('click',async()=>{
+  if(LOCAL){resetOrderForm();say($('#formMsg'),'');return}
+  if(!db||!uid)return;
+  try{await db.doc('orders/'+uid).delete();filledFromDb=true;dirty=false;$('#fItem').value='';$('#fTop').value='';$('#fPrice').value='';$('#fNote').value='';say($('#formMsg'),'已取消你的單。')}
+  catch(e){say($('#formMsg'),'取消失敗，請再試一次。',true)}
+});
+$('#listBox').addEventListener('click',async e=>{
+  const ed=e.target.closest('[data-edit]'),dl=e.target.closest('[data-del]');
+  if(ed){const o=orders.find(x=>x.id===ed.dataset.edit);if(!o)return;const d=o.d;
+    editingId=o.id;uid=o.id;myDoc=d;
+    $('#fName').value=d.name||'';$('#fItem').value=d.item||'';$('#fTop').value=d.topping||'';$('#fPrice').value=d.price??'';$('#fNote').value=d.note||'';
+    if(d.size)pick.size=d.size;if(d.sweet)pick.sweet=d.sweet;if(d.ice)pick.ice=d.ice;drawChips();renderAll();
+    $('#orderForm').scrollIntoView({behavior:'smooth',block:'start'});$('#fItem').focus({preventScroll:true});}
+  if(dl){const o=orders.find(x=>x.id===dl.dataset.del);if(!o)return;
+    if(dl.dataset.sure!=='1'){dl.dataset.sure='1';dl.textContent='確定刪？';return}
+    await db.doc('orders/'+o.id).delete();if(editingId===o.id)resetOrderForm();}
+});
+$('#listBox').addEventListener('change',async e=>{
+  const cb=e.target.closest('.paid');if(!cb||!isAdmin)return;
+  cb.disabled=true;
+  try{await db.doc('orders/'+cb.dataset.id).update({paid:cb.checked})}
+  catch(err){cb.checked=!cb.checked;say($('#adminMsg'),'付款狀態沒存到，請再勾一次。',true)}
+  finally{cb.disabled=false}
+});
+$('#saveCfg').addEventListener('click',async()=>{
+  const c={date:$('#cDate').value,store:$('#cStore').value.trim(),menu:$('#cMenu').value.trim(),deadline:$('#cDeadline').value,
+    minimum:num($('#cMin').value),fee:num($('#cFee').value),discount:num($('#cDisc').value)};
+  try{await db.doc('round/current').set(c);say($('#adminMsg'),LOCAL?'已儲存。':'已儲存，大家打開網頁就看得到。')}
+  catch(e){say($('#adminMsg'),'沒存到，請再按一次。',true)}
+});
+$('#copyOrder').addEventListener('click',async()=>{
+  const c=calc();const g={};
+  for(const o of c.list){const d=o.d;const k=[d.item,d.size,d.sweet,d.ice,d.topping?'加'+d.topping:''].filter(Boolean).join(' ');g[k]=(g[k]||0)+1}
+  const lines=Object.entries(g).map(([k,n])=>`${k} ×${n}`);
+  const text=`${cfg.store||'飲料'} 訂單（共 ${c.count} 杯）\n${lines.join('\n')}\n飲料小計 ${money(c.drinks)}`;
+  const box=$('#copyBox');box.textContent=text;box.classList.add('show');
+  try{await navigator.clipboard.writeText(text);say($('#adminMsg'),'已複製，可以直接貼到外送平台備註或傳給店家。')}
+  catch(e){say($('#adminMsg'),'無法自動複製，請直接選取下面的文字複製。')}
+});
+$('#clearBtn').addEventListener('click',()=>$('#confirmBox').classList.add('show'));
+$('#clearNo').addEventListener('click',()=>$('#confirmBox').classList.remove('show'));
+$('#clearYes').addEventListener('click',async()=>{
+  $('#confirmBox').classList.remove('show');say($('#adminMsg'),'清空中…');
+  try{
+    for(const o of orders.slice())await db.doc('orders/'+o.id).delete();
+    await db.doc('round/current').set({date:'',store:'',menu:'',deadline:'',minimum:0,fee:0,discount:0});
+    $('#copyBox').classList.remove('show');say($('#adminMsg'),'已清空，可以開始下一輪了。');
+  }catch(e){say($('#adminMsg'),'有些資料沒清掉，請再按一次「清空這一輪」。',true)}
+});
+
+(async()=>{
+  if(LOCAL){
+    db=makeLocal();isAdmin=true;
+    $('#adminBox').classList.remove('hide');
+    $('#adminBox .note').textContent='這是單機版：資料只存在這台電腦（或平板）的瀏覽器裡，請大家輪流在同一台裝置上點單。填好本次資訊後按「儲存」。';
+    $('#loadNote').textContent='單機版：資料只存在這台裝置，換電腦或清除瀏覽器資料就會不見。';
+    db.doc('round/current').onSnapshot(s=>{cfg=s.data()||{};fillCfgForm();renderAll()});
+    db.collection('orders').onSnapshot(s=>{orders=s.docs.map(d=>({id:d.id,d:d.data()||{}}));renderAll()});
+    setInterval(renderHeader,60000);
+    return;
+  }
+  const timer=setTimeout(()=>{$('#loadNote').textContent='暫時讀不到資料，請稍後再打開。'},10000);
+  db=await claude.use('db');
+  const user=await claude.use('user');
+  if(!db){clearTimeout(timer);$('#loadNote').textContent='請先登入 Claude 才能看到和填寫點單。';lockForm('請先登入 Claude 才能點單。');renderAll();return}
+  uid=user?await user.id():null;
+  isAdmin=user?!!(await user.canEdit()):false;
+  if(!uid)lockForm('目前無法辨認你的帳號，暫時不能點單。');
+  if(isAdmin)$('#adminBox').classList.remove('hide');
+  let cfgLoaded=false;
+  db.doc('round/current').onSnapshot(s=>{
+    cfg=s.exists?(s.data()||{}):{};
+    if(isAdmin&&!s.metadata.hasPendingWrites)fillCfgForm();
+    if(!s.metadata.fromCache)cfgLoaded=true;
+    renderAll();
+  },()=>{});
+  db.collection('orders').onSnapshot(s=>{
+    orders=s.docs.filter(d=>d.exists).map(d=>({id:d.id,d:d.data()||{}}));
+    const mine=orders.find(o=>o.id===uid);myDoc=mine?mine.d:null;
+    if(!s.metadata.fromCache){clearTimeout(timer);$('#loadNote').textContent=''}
+    fillMine();renderAll();
+  },e=>{clearTimeout(timer);$('#loadNote').textContent='讀取點單時出了問題，請重新打開網頁。'});
+  setInterval(renderHeader,60000);
+})();
+}
+</script>
+</body>
+</html>
